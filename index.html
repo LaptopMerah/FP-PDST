@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard PDRB - Perbandingan Kabupaten/Kota</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        dark: '#0b0f19',
+                    },
+                    animation: {
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-15px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0b0f19;
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(217, 70, 239, 0.15), transparent 25%);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6366f1;
+        }
+    </style>
+</head>
+
+<body class="text-slate-50 min-h-screen overflow-x-hidden font-sans antialiased selection:bg-indigo-500/30">
+    <div class="max-w-[1600px] mx-auto px-6 py-10">
+        <!-- Header -->
+        <div class="text-center mb-16 relative">
+            <h1
+                class="text-4xl md:text-5xl font-extrabold mb-4 tracking-tight drop-shadow-[0_0_30px_rgba(99,102,241,0.3)]">
+                <span class="bg-clip-text text-transparent bg-gradient-to-br from-white to-indigo-500">
+                    📊 Dashboard Perbandingan PDRB
+                </span>
+            </h1>
+            <p class="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
+                Analisis Produk Domestik Regional Bruto Kabupaten/Kota (2015-2029)
+            </p>
+        </div>
+
+        <!-- Selector Section -->
+        <div
+            class="rounded-3xl p-8 mb-12 border border-white/10 bg-slate-900/70 backdrop-blur-xl shadow-2xl hover:border-indigo-500/30 transition-colors duration-300">
+            <div class="flex items-center gap-5 mb-6">
+                <div
+                    class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl bg-gradient-to-br from-indigo-500/20 to-sky-500/20 border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+                    🏛️
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-1">Pilih Kabupaten/Kota untuk Dibandingkan</h3>
+                    <p class="text-slate-400">Tambahkan beberapa wilayah untuk melihat perbandingan trend PDRB</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-4">
+                <div class="relative flex-1 min-w-[280px]">
+                    <select id="regionSelect" onchange="addRegion()"
+                        class="w-full appearance-none bg-slate-900/80 border border-white/10 rounded-2xl px-6 py-4 text-slate-50 cursor-pointer transition-all duration-300 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:20px] bg-[right_1.5rem_center] bg-no-repeat">
+                        <option value="" class="bg-slate-900 text-slate-50">-- Pilih Wilayah --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-3 mt-6" id="selectedRegions">
+                <!-- Selected regions will appear here -->
+            </div>
+        </div>
+
+        <!-- Empty State Message -->
+        <div id="emptyState"
+            class="text-center py-20 px-5 rounded-3xl mb-10 bg-slate-900/40 border border-white/5 backdrop-blur-sm">
+            <p class="text-slate-400 text-lg max-w-lg mx-auto">Silakan pilih satu atau lebih Kabupaten/Kota di atas
+                untuk melihat grafik perbandingan PDRB.</p>
+        </div>
+
+        <!-- Charts Section -->
+        <div id="chartsSection" class="flex flex-col gap-10 hidden">
+            <!-- PDRB Pengeluaran Section -->
+            <div>
+                <div class="flex items-center gap-4 mb-8 px-3">
+                    <h2 class="text-2xl md:text-3xl font-bold tracking-tight">💰 PDRB Menurut Pengeluaran</h2>
+                    <span
+                        class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">7
+                        Komponen</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full" id="pengeluaranCharts">
+                    <!-- Pengeluaran charts will be generated here -->
+                </div>
+            </div>
+
+            <!-- PDRB Lapangan Usaha Section -->
+            <div>
+                <div class="flex items-center gap-4 mb-8 px-3 mt-8">
+                    <h2 class="text-2xl md:text-3xl font-bold tracking-tight">🏭 PDRB Menurut Lapangan Usaha</h2>
+                    <span
+                        class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-sky-500/10 text-sky-400 border border-sky-500/20">17
+                        Sektor</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full" id="usahaCharts">
+                    <!-- Lapangan Usaha charts will be generated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-20 pt-10 border-t border-white/10">
+            <p class="text-slate-400">Data: <span class="text-indigo-400 font-semibold">PDRB Historis (2015-2024) & Forecast (2025-2029)</span> | Nilai dalam Miliar Rupiah</p>
+        </div>
+    </div>
+
+    <script>
+        // Data Pengeluaran
+        const pengeluaranData = [
+            { col: 'Pengeluaran Konsumsi Rumah Tangga', label: 'Konsumsi Rumah Tangga', code: 'KRT' },
+            { col: 'Pengeluaran Konsumsi LNPRT', label: 'Konsumsi LNPRT', code: 'LNPRT' },
+            { col: 'Pengeluaran Konsumsi Pemerintah', label: 'Konsumsi Pemerintah', code: 'KP' },
+            { col: 'Pembentukan Modal Tetap Bruto', label: 'Modal Tetap Bruto', code: 'PMTB' },
+            { col: 'Perubahan Inventori', label: 'Perubahan Inventori', code: 'PI' },
+            { col: 'Net Ekspor', label: 'Net Ekspor', code: 'NE' },
+            { col: 'PDRB', label: 'Total PDRB', code: 'PDRB' }
+        ];
+
+        // Data Lapangan Usaha
+        const lapanganUsahaData = [
+            { col: 'A Pertanian, Kehutanan, dan Perikanan', label: 'Pertanian, Kehutanan & Perikanan', code: 'A' },
+            { col: 'B Pertambangan dan Penggalian', label: 'Pertambangan & Penggalian', code: 'B' },
+            { col: 'C Industri Pengolahan', label: 'Industri Pengolahan', code: 'C' },
+            { col: 'D Pengadaan Listrik dan Gas', label: 'Pengadaan Listrik & Gas', code: 'D' },
+            { col: 'E Pengadaan Air; Pengelolaan Sampah, Limbah, dan Daur Ulang', label: 'Air, Sampah & Daur Ulang', code: 'E' },
+            { col: 'F Konstruksi', label: 'Konstruksi', code: 'F' },
+            { col: 'G Perdagangan Besar dan Eceran; Reparasi Mobil dan Sepeda Motor', label: 'Perdagangan & Reparasi', code: 'G' },
+            { col: 'H Transportasi dan Pergudangan', label: 'Transportasi & Pergudangan', code: 'H' },
+            { col: 'I Penyediaan Akomodasi dan Makan Minum', label: 'Akomodasi & Makan Minum', code: 'I' },
+            { col: 'J Informasi dan Komunikasi', label: 'Informasi & Komunikasi', code: 'J' },
+            { col: 'K Jasa Keuangan dan Asuransi', label: 'Jasa Keuangan & Asuransi', code: 'K' },
+            { col: 'L Real Estat', label: 'Real Estat', code: 'L' },
+            { col: 'M,N Jasa Perusahaan', label: 'Jasa Perusahaan', code: 'M,N' },
+            { col: 'O Administrasi Pemerintahan, Pertahanan, dan Jaminan Sosial Wajib', label: 'Administrasi Pemerintahan', code: 'O' },
+            { col: 'P Jasa Pendidikan', label: 'Jasa Pendidikan', code: 'P' },
+            { col: 'Q Jasa Kesehatan dan Kegiatan Sosial', label: 'Jasa Kesehatan & Sosial', code: 'Q' },
+            { col: 'R,S,T,U Jasa Lainnya', label: 'Jasa Lainnya', code: 'R,S,T,U' }
+        ];
+
+        // Warna untuk setiap wilayah yang dipilih (Neon Palette)
+        const regionColors = [
+            '#6366f1', // Indigo
+            '#0ea5e9', // Sky
+            '#10b981', // Emerald
+            '#f59e0b', // Amber
+            '#ef4444', // Red
+            '#d946ef', // Fuchsia
+            '#8b5cf6', // Violet
+            '#14b8a6', // Teal
+            '#f97316', // Orange
+            '#84cc16'  // Lime
+        ];
+
+        let csvData = [];
+        let charts = {};
+        let selectedRegions = [];
+        // Years 2015-2029
+        const years = Array.from({length: 15}, (_, i) => 2015 + i);
+
+        // Parse CSV
+        function parseCSV(csvText) {
+            const lines = csvText.trim().split('\n');
+            const headers = parseCSVLine(lines[0]);
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                const row = {};
+                headers.forEach((header, index) => {
+                    const value = values[index];
+                    const num = parseFloat(value);
+                    row[header] = isNaN(num) ? value : num;
+                });
+                data.push(row);
+            }
+            return data;
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        // Load data
+        async function loadData() {
+            try {
+                const [pengeluaranRes, usahaRes, forecastRes] = await Promise.all([
+                    fetch('data/Data_PDRB_Pengeluaran.csv'),
+                    fetch('data/Data_PDRB_Lapangan_Usaha.csv'),
+                    fetch('data/PDRB_Forecast_2025-2029.csv')
+                ]);
+
+                const pengeluaranText = await pengeluaranRes.text();
+                const usahaText = await usahaRes.text();
+                const forecastText = await forecastRes.text();
+
+                const pengeluaranData = parseCSV(pengeluaranText);
+                const usahaData = parseCSV(usahaText);
+                const forecastData = parseCSV(forecastText);
+
+                // Merge historical data (2015-2024)
+                const historicalData = pengeluaranData.map(pRow => {
+                    const uRow = usahaData.find(u => u.KabKota === pRow.KabKota && u.Tahun === pRow.Tahun);
+                    return { ...pRow, ...uRow }; // Merge columns
+                });
+
+                // Combine with forecast data
+                csvData = [...historicalData, ...forecastData];
+                
+                console.log('Data loaded:', csvData.length, 'rows');
+
+                // Filter regions based on Forecast data only
+                const forecastRegions = [...new Set(forecastData.map(row => row.KabKota))].filter(r => r).sort();
+                populateDropdown(forecastRegions);
+
+                generateChartContainers();
+                updateAllCharts();
+            } catch (error) {
+                console.error('Error loading CSV:', error);
+                alert('Gagal memuat data CSV. Pastikan membuka via HTTP server (Live Server).');
+            }
+        }
+
+        // Populate dropdown
+        function populateDropdown(regions) {
+            // Fallback if no regions provided
+            if (!regions) {
+                regions = [...new Set(csvData.map(row => row.KabKota))].filter(r => r).sort();
+            }
+
+            const select = document.getElementById('regionSelect');
+            select.innerHTML = '<option value="" class="bg-slate-900 text-slate-50">-- Pilih Wilayah --</option>';
+            regions.forEach(region => {
+                select.add(new Option(region, region));
+            });
+        }
+
+        // Add region
+        function addRegion() {
+            const select = document.getElementById('regionSelect');
+            const region = select.value;
+            if (region && !selectedRegions.includes(region)) {
+                addRegionByName(region);
+            }
+            select.value = '';
+        }
+
+        function addRegionByName(region) {
+            if (selectedRegions.length >= 10) {
+                alert('Maksimal 10 wilayah dapat dipilih');
+                return;
+            }
+            if (!selectedRegions.includes(region)) {
+                selectedRegions.push(region);
+                updateSelectedRegionsUI();
+                updateAllCharts();
+            }
+        }
+
+        function removeRegion(region) {
+            selectedRegions = selectedRegions.filter(r => r !== region);
+            updateSelectedRegionsUI();
+            updateAllCharts();
+        }
+
+        function updateSelectedRegionsUI() {
+            const container = document.getElementById('selectedRegions');
+            container.innerHTML = selectedRegions.map((region, index) => `
+                <div class="flex items-center gap-2.5 px-5 py-2.5 bg-white/5 border border-white/10 rounded-full text-sm font-medium transition-all hover:bg-white/10 hover:-translate-y-0.5 hover:border-white/20 text-slate-200">
+                    <span class="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor]" style="background-color: ${regionColors[index]}; color: ${regionColors[index]}"></span>
+                    <span>${region}</span>
+                    <button class="ml-1 text-slate-400 hover:text-red-500 transition-colors" onclick="removeRegion('${region}')">✕</button>
+                </div>
+            `).join('');
+        }
+
+        // Generate chart containers
+        function generateChartContainers() {
+            // Pengeluaran charts
+            const pengeluaranContainer = document.getElementById('pengeluaranCharts');
+            pengeluaranContainer.innerHTML = pengeluaranData.map((item, index) => `
+                <div class="rounded-3xl p-7 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-indigo-500/10 border border-white/10 overflow-hidden backdrop-blur-xl bg-slate-900/70 w-full">
+                    <div class="flex items-start justify-between mb-6 pb-4 border-b border-white/10">
+                        <span class="text-lg font-semibold text-slate-50 leading-snug">${item.label}</span>
+                        <span class="text-xs font-bold px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 whitespace-nowrap ml-3 border border-indigo-500/20">${item.code}</span>
+                    </div>
+                    <div class="relative h-80 w-full">
+                        <canvas id="chartPengeluaran${index}"></canvas>
+                    </div>
+                </div>
+            `).join('');
+
+            // Lapangan Usaha charts
+            const usahaContainer = document.getElementById('usahaCharts');
+            usahaContainer.innerHTML = lapanganUsahaData.map((item, index) => `
+                <div class="rounded-3xl p-7 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-sky-500/10 border border-white/10 overflow-hidden backdrop-blur-xl bg-slate-900/70 w-full">
+                    <div class="flex items-start justify-between mb-6 pb-4 border-b border-white/10">
+                        <span class="text-lg font-semibold text-slate-50 leading-snug">${item.label}</span>
+                        <span class="text-xs font-bold px-3 py-1.5 rounded-lg bg-sky-500/10 text-sky-400 whitespace-nowrap ml-3 border border-sky-500/20">${item.code}</span>
+                    </div>
+                    <div class="relative h-80 w-full">
+                        <canvas id="chartUsaha${index}"></canvas>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Get region data for all years
+        function getRegionYearlyData(regionName, column) {
+            return years.map(year => {
+                const row = csvData.find(r => r.KabKota === regionName && r.Tahun === year);
+                return row ? (row[column] || 0) : 0;
+            });
+        }
+
+        // Create line chart
+        function createLineChart(canvasId, title, column) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+
+            if (selectedRegions.length === 0) {
+                return;
+            }
+
+            // Helper to create diagonal striped pattern
+            function createDiagonalPattern(color) {
+                const shape = document.createElement('canvas');
+                shape.width = 10;
+                shape.height = 10;
+                const c = shape.getContext('2d');
+                c.strokeStyle = color;
+                c.lineWidth = 1;
+                c.beginPath();
+                c.moveTo(0, 10);
+                c.lineTo(10, 0);
+                c.stroke();
+                return ctx.createPattern(shape, 'repeat');
+            }
+
+            const datasets = [];
+
+            selectedRegions.forEach((region, index) => {
+                const fullData = getRegionYearlyData(region, column);
+                const color = regionColors[index];
+
+                // Split data into Historical (2015-2024) and Forecast (2024-2029)
+                // Index 9 is 2024. We include it in both to connect the lines.
+                const histData = fullData.map((v, i) => i <= 9 ? v : null);
+                const forecastData = fullData.map((v, i) => i >= 9 ? v : null);
+
+                // Historical Dataset
+                datasets.push({
+                    label: region,
+                    data: histData,
+                    borderColor: color,
+                    backgroundColor: color + '15', // Solid transparent fill
+                    borderWidth: 3,
+                    pointBackgroundColor: '#0f172a', // Dark dots
+                    pointBorderColor: color,
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: regionColors[index],
+                    pointHoverBorderColor: '#fff',
+                    tension: 0.4,
+                    fill: true
+                });
+
+                // Forecast Dataset
+                datasets.push({
+                    label: region + ' (Forecast)',
+                    data: forecastData,
+                    borderColor: color,
+                    backgroundColor: createDiagonalPattern(color), // Striped fill
+                    borderWidth: 3,
+                    borderDash: [6, 6], // Dashed line
+                    pointBackgroundColor: '#ffffff', // White dots
+                    pointBorderColor: color,
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: '#ffffff',
+                    pointHoverBorderColor: color,
+                    tension: 0.4,
+                    fill: true
+                });
+            });
+
+            charts[canvasId] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: years,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                color: '#94a3b8',
+                                font: { size: 11, family: "'Plus Jakarta Sans', sans-serif" },
+                                // Hide forecast datasets from legend
+                                filter: function(item, chart) {
+                                    return !item.text.includes('(Forecast)');
+                                }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleColor: '#f8fafc',
+                            bodyColor: '#cbd5e1',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            titleFont: { size: 13, weight: '600', family: "'Plus Jakarta Sans', sans-serif" },
+                            bodyFont: { size: 12, family: "'Plus Jakarta Sans', sans-serif" },
+                            padding: 12,
+                            cornerRadius: 12,
+                            displayColors: true,
+                            boxPadding: 6,
+                            callbacks: {
+                                label: function (context) {
+                                    // Remove (Forecast) from label
+                                    let label = context.dataset.label || '';
+                                    label = label.replace(' (Forecast)', '');
+
+                                    const value = context.raw;
+                                    const formatted = value.toLocaleString('id-ID', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    });
+                                    return `${label}: Rp ${formatted} M`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            },
+                            ticks: {
+                                font: { size: 11, weight: '500', family: "'Plus Jakarta Sans', sans-serif" },
+                                color: '#64748b'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                font: { size: 10, family: "'Plus Jakarta Sans', sans-serif" },
+                                color: '#64748b',
+                                callback: function (value) {
+                                    if (Math.abs(value) >= 1000) {
+                                        return (value / 1000).toFixed(1) + 'rb';
+                                    }
+                                    return value.toLocaleString('id-ID');
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 800,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+
+        // Update all charts
+        function updateAllCharts() {
+            const chartsSection = document.getElementById('chartsSection');
+            const emptyState = document.getElementById('emptyState');
+
+            if (selectedRegions.length === 0) {
+                chartsSection.classList.add('hidden');
+                chartsSection.classList.remove('flex');
+                emptyState.style.display = 'block';
+                return;
+            } else {
+                chartsSection.classList.remove('hidden');
+                chartsSection.classList.add('flex');
+                emptyState.style.display = 'none';
+            }
+
+            // Use setTimeout to ensure the container is visible and layout is calculated
+            // before Chart.js tries to render. This prevents "messy" or zero-size charts.
+            setTimeout(() => {
+                // Update Pengeluaran charts
+                pengeluaranData.forEach((item, index) => {
+                    createLineChart(`chartPengeluaran${index}`, item.label, item.col);
+                });
+
+                // Update Lapangan Usaha charts
+                lapanganUsahaData.forEach((item, index) => {
+                    createLineChart(`chartUsaha${index}`, item.label, item.col);
+                });
+            }, 50);
+        }
+
+        // Initialize
+        loadData();
+    </script>
+</body>
+
+</html>
